@@ -7,21 +7,8 @@ use std::net::{TcpListener,TcpStream};
 use std::io::{Read,Write,BufReader,BufRead,BufWriter};
 
 mod ReqHandler;
-mod ResHandler;
 
 //with the help of https://dfockler.github.io/2016/05/20/web-server.html
-
-//In return to a valid GET request, the web server spawns a thread that retrieves the request, records it to a log file, and generates a response. 
-
-/*
-200 OK, which starts a reply that serves the specified file;
-
-400 Bad Request, which indicates that the command is not a properly formatted GET command;
-
-403 Forbidden, which rejects a command because it specifies a file that is off-limits; and
-
-404 Not Found, which informs the client that the specified file does not exist.
-*/
 
 pub struct Request {
 	method: String,
@@ -35,7 +22,7 @@ pub struct Response {
 	web_server_name: String,
 	content_type: String,
 	content_length: usize,
-	file_content: Option<String>,
+	file_content: String,
 }
 
 pub enum ReqErr {
@@ -71,18 +58,33 @@ fn main() {
 fn handle_request(stream: &mut TcpStream) {
 	//get req (by line) from stream
 	let stream_contents = ReqHandler::read_stream(stream);
+	// println!("{}", stream_contents);
 
 	//if no error, lock and modify log file then print response to stream 
 	//otherwise, print error response
 	match ReqHandler::validate_request(stream_contents) {
-		Ok(request) => {
-
+		Ok(response) => {
+			println!("{}", response);
 		},
-		Err(e) => {
-
+		Err(err) => {
+			println!("{}", err);
 		}
 	}
 	
+}
+
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+
+    	write!(f, "{} {}\n{}\nContent-type: {}\nContent-length: {}\n\n{}",
+    				self.protocol,
+		        	self.status_message,
+		        	self.web_server_name,
+		        	self.content_type,
+		        	self.content_length,
+		        	self.file_content)
+        
+    }
 }
 
 impl fmt::Display for ReqErr {
