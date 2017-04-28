@@ -1,3 +1,4 @@
+use std::fmt;
 use std::thread;
 use std::fs::File;
 use std::error::Error;
@@ -34,6 +35,7 @@ pub struct Response {
 	web_server_name: String,
 	content_type: String,
 	content_length: usize,
+	file_content: Option<String>,
 }
 
 pub enum ReqErr {
@@ -69,7 +71,6 @@ fn main() {
 fn handle_request(stream: &mut TcpStream) {
 	//get req (by line) from stream
 	let stream_contents = ReqHandler::read_stream(stream);
-	// println!("{}",stream_contents);
 
 	//if no error, lock and modify log file then print response to stream 
 	//otherwise, print error response
@@ -82,5 +83,15 @@ fn handle_request(stream: &mut TcpStream) {
 		}
 	}
 	
+}
 
+impl fmt::Display for ReqErr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            ReqErr::Err_400 => "400 Bad Request",
+            ReqErr::Err_403 => "403 Forbidden",
+            ReqErr::Err_404 => "404 Not Found",
+        };
+        write!(f, "{}", printable)
+    }
 }
