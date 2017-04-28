@@ -1,17 +1,46 @@
 use std::thread;
 use std::fs::File;
+use std::error::Error;
 use std::sync::{Arc,Mutex};
 use std::net::{TcpListener,TcpStream};
 use std::io::{Read,Write,BufReader,BufRead,BufWriter};
 
-mod reqhandler;
-mod reshandler;
+mod ReqHandler;
+mod ResHandler;
 
 //with the help of https://dfockler.github.io/2016/05/20/web-server.html
 
 //In return to a valid GET request, the web server spawns a thread that retrieves the request, records it to a log file, and generates a response. 
 
+/*
+200 OK, which starts a reply that serves the specified file;
 
+400 Bad Request, which indicates that the command is not a properly formatted GET command;
+
+403 Forbidden, which rejects a command because it specifies a file that is off-limits; and
+
+404 Not Found, which informs the client that the specified file does not exist.
+*/
+
+pub struct Request {
+	method: String,
+	path_to_file: String,
+	protocol: String,
+}
+
+pub struct Response {
+	protocol: String,
+	status_message: String,
+	web_server_name: String,
+	content_type: String,
+	content_length: usize,
+}
+
+pub enum ReqErr {
+	Err_400,
+	Err_403,
+	Err_404,
+}
 
 fn main() {
 
@@ -23,26 +52,35 @@ fn main() {
 	println!("Log file created in /logs/log.txt");
 
 	for stream in listener.incoming() {
-		let log_file = log_file.clone();
+		println!("------------------------------");
 		println!("New connection, thread spawned");
 
 		match stream {
 			Ok(mut stream) => {
-				handle_client(&mut stream);
+				handle_request(&mut stream);
 			}
-			Err(e) => {
-				println!("Connection failed! Try again later...");
+			Err(_) => {
+				println!("Connection failed! Try again later.");
 			}
 		}
-
 	}
 }
 
-fn handle_client(stream: &mut TcpStream) {
+fn handle_request(stream: &mut TcpStream) {
 	//get req (by line) from stream
-	//check for 400 bad request error
-	//then check if file exists (404 Not Found error)
-	//then check whether it is off limits (403 Forbidden)
+	let stream_contents = ReqHandler::read_stream(stream);
+	// println!("{}",stream_contents);
+
 	//if no error, lock and modify log file then print response to stream 
 	//otherwise, print error response
+	match ReqHandler::validate_request(stream_contents) {
+		Ok(request) => {
+
+		},
+		Err(e) => {
+
+		}
+	}
+	
+
 }
