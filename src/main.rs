@@ -1,20 +1,17 @@
 use std::fmt;
 use std::thread;
 use std::fs::File;
-use std::error::Error;
+use std::io::Write;
 use std::sync::{Arc,Mutex};
 use std::net::{TcpListener,TcpStream};
-use std::io::{Read,Write,BufReader,BufRead,BufWriter};
 
-mod ReqHandler;
+use chrono::prelude::*;
+extern crate chrono;
+
+mod req_handler;
+
 
 //with the help of https://dfockler.github.io/2016/05/20/web-server.html
-
-pub struct Request {
-	method: String,
-	path_to_file: String,
-	protocol: String,
-}
 
 pub struct Response {
 	protocol: String,
@@ -26,9 +23,9 @@ pub struct Response {
 }
 
 pub enum ReqErr {
-	Err_400,
-	Err_403,
-	Err_404,
+	Err400,
+	Err403,
+	Err404,
 }
 
 fn main() {
@@ -46,7 +43,10 @@ fn main() {
 
 		match stream {
 			Ok(mut stream) => {
-				handle_request(&mut stream);
+				let mut log_file = log_file.clone();
+				thread::spawn (move || {
+					handle_request(&mut stream, &mut log_file);
+				});
 			}
 			Err(_) => {
 				println!("Connection failed! Try again later.");
@@ -55,19 +55,22 @@ fn main() {
 	}
 }
 
-fn handle_request(stream: &mut TcpStream) {
+fn handle_request(stream: &mut TcpStream, log_file: &mut Arc<Mutex<File>>) {
 	//get req (by line) from stream
-	let stream_contents = ReqHandler::read_stream(stream);
-	// println!("{}", stream_contents);
+	let stream_contents = req_handler::read_stream(stream);
+	let req_info: Vec<&str> = stream_contents.split_whitespace().collect();
+
 
 	//if no error, lock and modify log file then print response to stream 
 	//otherwise, print error response
-	match ReqHandler::validate_request(stream_contents) {
+	match req_handler::validate_request(&req_info) {
 		Ok(response) => {
-			println!("{}", response);
+			log_info(&req_info, log_file, "200 OK\n");
+			&stream.write_all(response.to_string().as_bytes()).unwrap();
 		},
 		Err(err) => {
-			println!("{}", err);
+			log_info(&req_info, log_file, &err.to_string());
+			&stream.write_all(err.to_string().as_bytes()).unwrap();
 		}
 	}
 	
@@ -76,7 +79,7 @@ fn handle_request(stream: &mut TcpStream) {
 impl fmt::Display for Response {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 
-    	write!(f, "{} {}\n{}\nContent-type: {}\nContent-length: {}\n\n{}",
+    	write!(f, "{} {}\n{}\nContent-type: {}\nContent-length: {}\n\n{}\n",
     				self.protocol,
 		        	self.status_message,
 		        	self.web_server_name,
@@ -90,10 +93,41 @@ impl fmt::Display for Response {
 impl fmt::Display for ReqErr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let printable = match *self {
-            ReqErr::Err_400 => "400 Bad Request",
-            ReqErr::Err_403 => "403 Forbidden",
-            ReqErr::Err_404 => "404 Not Found",
+            ReqErr::Err400 => "400 Bad Request",
+            ReqErr::Err403 => "403 Forbidden",
+            ReqErr::Err404 => "404 Not Found",
         };
-        write!(f, "{}", printable)
+        write!(f, "{}\n", printable)
     }
+}
+
+					
+fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &str) {
+	let mut log_guard = log_file.lock().unwrap();
+	let mut log_info = String::new();
+
+	let method = req_info[0];
+	let path = req_info[1];
+	let prot = req_info[2];
+
+	//Get current time
+	let time: DateTime<UTC> = UTC::now();
+	let time_str = time.format("%Y-%m-%d %H:%M:%S").to_string();
+
+	log_info.push_str(&time_str);
+	log_info.push_str("  -  ");
+
+	//Request
+	log_info.push_str(method);
+	log_info.push_str(" ");
+	log_info.push_str(path);
+	log_info.push_str(" ");
+	log_info.push_str(prot);
+	log_info.push_str("  -  ");
+
+	//Response
+	log_info.push_str(response);
+
+	log_guard.write(log_info.as_bytes()).expect("Unable to write data to log file");
+
 }
