@@ -1,3 +1,19 @@
+/*
+* webserver
+* a rudimentary web server
+* Responds to a single command of HTTP/0.9,
+* the GET method, with the follwing shape:
+* GET /path/to/file HTTP
+* Spawns a thread that retrieves the request,
+* Records it to a log file, and generates a response
+*
+* Assumptions
+* 1) Assumes filepath is valid
+*	- Assumes file path begins with /
+*	- Assumes there is a period in the filepath
+*	- Will return 400 Bad Request if access to directory is attempted
+*/
+
 use std::fmt;
 use std::thread;
 use std::fs::File;
@@ -32,6 +48,7 @@ fn main() {
 	let listener = TcpListener::bind("127.0.0.1:8080").unwrap();
 	println!("Listening on port 8080...");
 
+	//creates log file
 	let log_file_raw = File::create("logs/log.txt").unwrap();
 	let log_file = Arc::new(Mutex::new(log_file_raw));
 	println!("Log file created in /logs/log.txt");
@@ -41,9 +58,12 @@ fn main() {
 		match stream {
 			Ok(mut stream) => {
 				let mut log_file = log_file.clone();
+
+				//spawns new thread
 				thread::spawn (move || {
 					println!("------------------------------");
 					println!("New connection, thread spawned");
+					//handles incoming request
 					handle_request(&mut stream, &mut log_file);
 				});
 			}
@@ -54,6 +74,10 @@ fn main() {
 	}
 }
 
+/* handle_request */
+// takes in a TcpStream and log file
+// checks whether request is valid
+// writes results back to stream
 fn handle_request(stream: &mut TcpStream, log_file: &mut Arc<Mutex<File>>) {
 	//get req (by line) from stream
 	let stream_contents = req_handler::read_stream(stream);
@@ -75,32 +99,10 @@ fn handle_request(stream: &mut TcpStream, log_file: &mut Arc<Mutex<File>>) {
 	
 }
 
-impl fmt::Display for Response {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-
-    	write!(f, "{} {}\n{}\nContent-type: {}\nContent-length: {}\n\n{}\n",
-    				self.protocol,
-		        	self.status_message,
-		        	self.web_server_name,
-		        	self.content_type,
-		        	self.content_length,
-		        	self.file_content)
-        
-    }
-}
-
-impl fmt::Display for ReqErr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let printable = match *self {
-            ReqErr::Err400 => "400 Bad Request",
-            ReqErr::Err403 => "403 Forbidden",
-            ReqErr::Err404 => "404 Not Found",
-        };
-        write!(f, "{}\n", printable)
-    }
-}
-
-					
+/* log_info */
+// takes in request info, log file, and response
+// locks log file, generates log info (datetime, request, response),
+// and logs it to the file			
 fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &str) {
 	let mut log_guard = log_file.lock().unwrap();
 	let mut log_info = String::new();
@@ -129,4 +131,29 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 
 	log_guard.write(log_info.as_bytes()).expect("Unable to write data to log file");
 
+}
+
+impl fmt::Display for Response {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+
+    	write!(f, "{} {}\n{}\nContent-type: {}\nContent-length: {}\n\n{}\n",
+    				self.protocol,
+		        	self.status_message,
+		        	self.web_server_name,
+		        	self.content_type,
+		        	self.content_length,
+		        	self.file_content)
+        
+    }
+}
+
+impl fmt::Display for ReqErr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            ReqErr::Err400 => "400 Bad Request",
+            ReqErr::Err403 => "403 Forbidden",
+            ReqErr::Err404 => "404 Not Found",
+        };
+        write!(f, "{}\n", printable)
+    }
 }

@@ -40,14 +40,17 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 	//regex to match file name
 	let re = Regex::new(r"^(/[\w\d-_]+)*/[\w\d-_]+\.[\w\d]+$").unwrap();
 
-	//Step 1: Check if valid request (400 Bad Request)
+	//Step 1: Check if valid request
+	//Check if it is a GET request,
+	//whether file path is really a file path,
+	//and whether the protocol is HTTP
 	if req_info.len() >= 3 &&
 		req_info[0] == "GET"     &&
 		re.is_match(req_info[1]) &&
 		req_info[2].contains("HTTP") {
 
-
-		//Step 2: Check if file exists (404 Not Found error)
+		//Step 2: Check if file exists
+		//generate path with environment's current directory
 		let mut path_string = String::new();
 		let env_path = env::current_dir().unwrap();
 
@@ -57,34 +60,42 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 		let path = Path::new(&path_string);
 		if path.exists() {
 
-			//Step 3: Check whether file is not off limits (403 Forbidden)
+			//Step 3: Check whether file is not off limits 
 			let file = File::open(&path_string);
 			match file {
 				Ok(mut f) => {
+					//200 Ok! Create response
 					return Ok(generate_response(&mut f, &req_info)); 
 				},
 				Err(_) => {
+					//(403 Forbidden)
 					return Err(ReqErr::Err403);
 				}
 			}
 
 		} else {
+			//(404 Not Found)
 			return Err(ReqErr::Err404);
 		}
 
 
 	}
 
-	//400 Bad Request: improperly formatted GET command
 	else {
+		//(400 Bad Request)
 		return Err(ReqErr::Err400);
 	}
 }
 
+/* generate_response */
+//takes in the file to be read, request info
+//returns a Response
+//generates response to be written onto stream
 fn generate_response(file: &mut File, req_info: &Vec<&str>) -> Response {
 	let mut file_contents = String::new();
 	let bytes_read = file.read_to_string(&mut file_contents).unwrap();
 
+	//checks whether content is html or plain
 	let mut content_type = String::new();
 	content_type.push_str("text/");
 	if req_info[1].contains(".html") {
@@ -93,6 +104,7 @@ fn generate_response(file: &mut File, req_info: &Vec<&str>) -> Response {
 		content_type.push_str("plain");
 	}
 
+	//should be some variant of HTTP
 	let protocol = req_info[2];
 
 	Response {
