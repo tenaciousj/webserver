@@ -6,12 +6,11 @@ use std::sync::{Arc,Mutex};
 use std::net::{TcpListener,TcpStream};
 
 use chrono::prelude::*;
+
 extern crate chrono;
+extern crate regex;
 
 mod req_handler;
-
-
-//with the help of https://dfockler.github.io/2016/05/20/web-server.html
 
 pub struct Response {
 	protocol: String,
@@ -38,13 +37,13 @@ fn main() {
 	println!("Log file created in /logs/log.txt");
 
 	for stream in listener.incoming() {
-		println!("------------------------------");
-		println!("New connection, thread spawned");
 
 		match stream {
 			Ok(mut stream) => {
 				let mut log_file = log_file.clone();
 				thread::spawn (move || {
+					println!("------------------------------");
+					println!("New connection, thread spawned");
 					handle_request(&mut stream, &mut log_file);
 				});
 			}

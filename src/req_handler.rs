@@ -6,6 +6,9 @@ use std::fs::File;
 use std::path::Path;
 use std::net::TcpStream;
 
+
+use regex::Regex;
+
 const WEB_SERVER_NAME: &'static str = "jrp338-kqj094-web-server/0.1";
 
 
@@ -34,26 +37,28 @@ pub fn read_stream(stream: &mut TcpStream) -> String {
 // will return ReqErr (400, 403, 404) otherwise
 pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 
+	//regex to match file name
+	let re = Regex::new(r"^(/[\w\d-_]+)*/[\w\d-_]+\.[\w\d]+$").unwrap();
+
 	//Step 1: Check if valid request (400 Bad Request)
 	if req_info.len() >= 3 &&
 		req_info[0] == "GET"     &&
-		req_info[1][0..1] == *"/" &&
+		re.is_match(req_info[1]) &&
 		req_info[2].contains("HTTP") {
+
 
 		//Step 2: Check if file exists (404 Not Found error)
 		let mut path_string = String::new();
 		let env_path = env::current_dir().unwrap();
-		println!("{}", env_path.display());
+
 		path_string.push_str(&env_path.display().to_string());
 		path_string.push_str(req_info[1]);
 
-		let path_str = path_string.clone();
-
-		let path = Path::new(&path_str);
+		let path = Path::new(&path_string);
 		if path.exists() {
 
 			//Step 3: Check whether file is not off limits (403 Forbidden)
-			let file = File::open(path_string);
+			let file = File::open(&path_string);
 			match file {
 				Ok(mut f) => {
 					return Ok(generate_response(&mut f, &req_info)); 
@@ -66,6 +71,7 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 		} else {
 			return Err(ReqErr::Err404);
 		}
+
 
 	}
 
