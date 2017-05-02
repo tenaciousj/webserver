@@ -115,17 +115,12 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 	log_info.push_str(&time_str);
 	log_info.push_str("  -  ");
 
-	if req_info.len() >= 1 {
-		log_info.push_str(req_info[0]);
-		log_info.push_str(" ");
-	}
-	if req_info.len() >= 2 {
-		log_info.push_str(req_info[1]);
-		log_info.push_str(" ");
-	}
-	if req_info.len() >= 3 {
-		log_info.push_str(req_info[2]);
-		log_info.push_str(" ");
+	//only push GET, filepath, and protocol
+	for i in 0..3 {
+		if req_info.len() >= i {
+			log_info.push_str(req_info[i]);
+			log_info.push_str(" ");
+		}
 	}
 
 	log_info.push_str(" -  ");
@@ -133,7 +128,8 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 	//Response
 	log_info.push_str(response);
 
-	log_guard.write(log_info.as_bytes()).expect("Unable to write data to log file");
+	//write to log file
+	write!(&mut log_guard, "{}", log_info).expect("Unable to write data to log file");
 
 }
 
