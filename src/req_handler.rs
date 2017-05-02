@@ -192,7 +192,7 @@ mod validate_request_tests {
 
 	#[test]
 	fn no_index_files() {
-		validate_assert(&vec!["GET", "/src/", "HTTP"], Err(ReqErr::Err404));
+		validate_assert(&vec!["GET", "/test/", "HTTP"], Err(ReqErr::Err404));
 	}
 
 	#[test]
@@ -253,10 +253,14 @@ mod validate_request_tests {
 		assert_eq!(expected, output);
 	}
 }
+
+
 /* generate_response */
 //takes in the file to be read, request info
 //returns a Response
 //generates response to be written onto stream
+//does not validate req_info because this function is only called 
+// by validate_request(), which handles validation
 fn generate_response(file: &mut File, req_info: &Vec<&str>) -> Response {
 	let mut file_contents = String::new();
 	let bytes_read = file.read_to_string(&mut file_contents).unwrap();
@@ -280,5 +284,77 @@ fn generate_response(file: &mut File, req_info: &Vec<&str>) -> Response {
 		content_type: content_type,
 		content_length: bytes_read,
 		file_content: file_contents,
+	}
+}
+
+#[cfg(test)]
+mod generate_response_tests {
+	use std::env;
+	use std::fs::File;
+	use super::{Response, generate_response, WEB_SERVER_NAME};
+
+	#[test] 
+	fn txt_response() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/plain".to_owned(),
+			content_length: 4,
+			file_content: "meow".to_owned(),
+		};
+		response_assert(&vec!["GET", "/test/meow.txt", "HTTP"], response);
+	}
+
+	#[test] 
+	fn html_response() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/html".to_owned(),
+			content_length: 0,
+			file_content: "".to_owned(),
+		};
+		response_assert(&vec!["GET", "/test/html/index.html", "HTTP"], response);
+	}
+	#[test] 
+	fn shtml_response() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/html".to_owned(),
+			content_length: 0,
+			file_content: "".to_owned(),
+		};
+		response_assert(&vec!["GET", "/test/shtml/index.shtml", "HTTP"], response);
+	}
+
+	#[test] 
+	fn http11_response() {
+		let response = Response {
+			protocol: "HTTP/1.1".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/html".to_owned(),
+			content_length: 0,
+			file_content: "".to_owned(),
+		};
+		response_assert(&vec!["GET", "/test/shtml/index.shtml", "HTTP/1.1"], response);
+	}
+
+	fn response_assert(req_info: &Vec<&str>, expected: Response) {
+		let mut path_string = String::new();
+		let env_path = env::current_dir().unwrap();
+
+		path_string.push_str(&env_path.display().to_string());
+		path_string.push_str(req_info[1]);
+
+		let file = File::open(&path_string);
+
+		let output = generate_response(&mut file.unwrap(), req_info);
+		assert_eq!(expected, output);
+
 	}
 }

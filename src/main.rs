@@ -11,8 +11,7 @@
 * 1) Assumes filepath is valid
 *	- Assumes file path begins with /
 *	- Assumes file path matches traditional file name regex
-*	- Will return 400 Bad Request if access to directory is attempted
-* 	- Will return 403 Forbidden if a compressed file is attempted
+*	- Assumes file can be interpreted as text 
 */
 
 use std::fmt;
