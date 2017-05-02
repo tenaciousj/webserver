@@ -11,8 +11,7 @@
 * 1) Assumes filepath is valid
 *	- Assumes file path begins with /
 *	- Assumes file path matches traditional file name regex
-*	- Will return 400 Bad Request if access to directory is attempted
-* 	- Will return 403 Forbidden if a compressed file is attempted
+*	- Assumes file can be interpreted as text 
 */
 
 use std::fmt;
@@ -29,6 +28,7 @@ extern crate regex;
 
 mod req_handler;
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Response {
 	protocol: String,
 	status_message: String,
@@ -38,6 +38,7 @@ pub struct Response {
 	file_content: String,
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ReqErr {
 	Err400,
 	Err403,
