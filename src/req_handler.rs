@@ -3,6 +3,7 @@ use super::{Response,ReqErr};
 use std::env;
 use std::io::Read;
 use std::fs::File;
+use std::fs::read_dir;
 use std::path::Path;
 use std::net::TcpStream;
 
@@ -60,7 +61,7 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 
 		let path = Path::new(&path_string);
 		if path.exists() {
-
+			// Step 3: Check if it's a file or directory
 			if path.is_file() {
 				//Step 3: Check whether file is not off limits 
 				let file = File::open(&path_string);
@@ -75,15 +76,50 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 					}
 				}
 			} else if path.is_dir() {
-				return Err(ReqErr::Err400);
-			} else {
-				return Err(ReqErr::Err404)
-			}
-			
-		} else {
-			//(404 Not Found)
-			return Err(ReqErr::Err404);
-		}
+				if let Ok(dir_entries) = read_dir(path) {
+					// check for index files 
+					for dir_entry in dir_entries {
+						if let Ok(entry) = dir_entry {
+							let file_type_result = entry.file_type();
+							if let Ok(file_type) = file_type_result {
+								if file_type.is_file() {
+									// println!("{:?}", entry.file_name());
+									let entry_name = entry.file_name();
+									let entry_str = entry_name.to_str().unwrap();
+									if entry_str == "index.html" || 
+									    entry_str == "index.shtml" || 
+									    entry_str == "index.txt" {
+										// println!("meow");
+										let file = File::open(&entry.path().as_path());
+										match file {
+											Ok(mut f) => {
+												//200 Ok! Create response
+												return 
+												Ok(generate_response(&mut f, &req_info)); 
+											},
+											Err(_) => {
+												//(403 Forbidden)
+												return Err(ReqErr::Err403);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// return 404 if not found
+					return Err(ReqErr::Err404);
+				} else {
+					// since we already checked if the path exists
+					// and it's a directory, that means that any error
+					// comes from forbidden access to directory
+					return Err(ReqErr::Err403);					
+				}
+
+				
+			}	
+		} 
+		return Err(ReqErr::Err404)
 
 
 	}
