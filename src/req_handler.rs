@@ -35,10 +35,12 @@ pub fn read_stream(stream: &mut TcpStream) -> String {
 // checks whether request is valid
 // will return Response if request is valid
 // will return ReqErr (400, 403, 404) otherwise
+// TODO: handle zips
 pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 
 	//regex to match file name
-	let re = Regex::new(r"^(/[\w\d-_]+)*/[\w\d-_]+\.[\w\d]+$").unwrap();
+	// TODO: fix handling just a directory 
+	let re = Regex::new(r"^(/[\w\d-_]+)*/[\w\d-_]+").unwrap();
 
 	//Step 1: Check if valid request
 	//Check if it is a GET request,
@@ -47,7 +49,7 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 	if req_info.len() >= 3 &&
 		req_info[0] == "GET"     &&
 		re.is_match(req_info[1]) &&
-		req_info[2].contains("HTTP") {
+		req_info[2].starts_with("HTTP") {
 		//Step 2: Check if file exists
 		//generate path with environment's current directory
 		let mut path_string = String::new();
@@ -59,19 +61,25 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 		let path = Path::new(&path_string);
 		if path.exists() {
 
-			//Step 3: Check whether file is not off limits 
-			let file = File::open(&path_string);
-			match file {
-				Ok(mut f) => {
-					//200 Ok! Create response
-					return Ok(generate_response(&mut f, &req_info)); 
-				},
-				Err(_) => {
-					//(403 Forbidden)
-					return Err(ReqErr::Err403);
+			if path.is_file() {
+				//Step 3: Check whether file is not off limits 
+				let file = File::open(&path_string);
+				match file {
+					Ok(mut f) => {
+						//200 Ok! Create response
+						return Ok(generate_response(&mut f, &req_info)); 
+					},
+					Err(_) => {
+						//(403 Forbidden)
+						return Err(ReqErr::Err403);
+					}
 				}
+			} else if path.is_dir() {
+				return Err(ReqErr::Err400);
+			} else {
+				return Err(ReqErr::Err404)
 			}
-
+			
 		} else {
 			//(404 Not Found)
 			return Err(ReqErr::Err404);
