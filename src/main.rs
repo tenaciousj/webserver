@@ -10,8 +10,9 @@
 * Assumptions
 * 1) Assumes filepath is valid
 *	- Assumes file path begins with /
-*	- Assumes there is a period in the filepath
+*	- Assumes file path matches traditional file name regex
 *	- Will return 400 Bad Request if access to directory is attempted
+* 	- Will return 403 Forbidden if a compressed file is attempted
 */
 
 use std::fmt;
@@ -116,9 +117,16 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 	log_info.push_str(&time_str);
 	log_info.push_str("  -  ");
 
-	// Request
-	for req in req_info.iter() {
-		log_info.push_str(req);
+	if req_info.len() >= 1 {
+		log_info.push_str(req_info[0]);
+		log_info.push_str(" ");
+	}
+	if req_info.len() >= 2 {
+		log_info.push_str(req_info[1]);
+		log_info.push_str(" ");
+	}
+	if req_info.len() >= 3 {
+		log_info.push_str(req_info[2]);
 		log_info.push_str(" ");
 	}
 
