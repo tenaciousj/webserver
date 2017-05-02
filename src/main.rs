@@ -28,6 +28,7 @@ extern crate regex;
 
 mod req_handler;
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Response {
 	protocol: String,
 	status_message: String,
@@ -37,6 +38,7 @@ pub struct Response {
 	file_content: String,
 }
 
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum ReqErr {
 	Err400,
 	Err403,

@@ -36,11 +36,9 @@ pub fn read_stream(stream: &mut TcpStream) -> String {
 // checks whether request is valid
 // will return Response if request is valid
 // will return ReqErr (400, 403, 404) otherwise
-// TODO: handle zips
 pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 
 	//regex to match file name
-	// TODO: fix handling just a directory 
 	let re = Regex::new(r"^(/[\w\d-_]+)*/[\w\d-_]+").unwrap();
 
 	//Step 1: Check if valid request
@@ -63,7 +61,7 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 		if path.exists() {
 			// Step 3: Check if it's a file or directory
 			if path.is_file() {
-				//Step 3: Check whether file is not off limits 
+				//Step 4: Check whether file is not off limits 
 				let file = File::open(&path_string);
 				match file {
 					Ok(mut f) => {
@@ -115,21 +113,139 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 					// comes from forbidden access to directory
 					return Err(ReqErr::Err403);					
 				}
-
-				
 			}	
 		} 
 		return Err(ReqErr::Err404)
-
-
-	}
-
-	else {
+	} else {
 		//(400 Bad Request)
 		return Err(ReqErr::Err400);
 	}
 }
 
+#[cfg(test)]
+mod validate_request_tests {
+	use super::{Response, ReqErr, validate_request,WEB_SERVER_NAME};
+	#[test]
+	fn empty_input() {
+		validate_assert(&vec![], Err(ReqErr::Err400));
+	}
+
+	#[test]
+	fn one_input() {
+		validate_assert(&vec!["lol"], Err(ReqErr::Err400));
+	}
+
+	#[test]
+	fn two_input() {
+		validate_assert(&vec!["lol", "meow"], Err(ReqErr::Err400));
+	}
+
+	#[test]
+	fn bad_get() {
+		validate_assert(&vec!["get", "/src/", "HTTP"], Err(ReqErr::Err400));
+	}
+
+	#[test]
+	fn bad_path() {
+		validate_assert(&vec!["GET", "src/", "HTTP"], Err(ReqErr::Err400));
+	}
+
+	#[test]
+	fn bad_proto() {
+		validate_assert(&vec!["GET", "/src/", "http"], Err(ReqErr::Err400));
+	}
+
+	#[test]
+	fn path_does_not_exist_file() {
+		validate_assert(&vec!["GET", "/srcLOL/", "HTTP"], Err(ReqErr::Err404));
+	}
+
+	#[test]
+	fn forbidden_access_file() {
+		validate_assert(&vec!["GET", "/test/locked_test.txt", "HTTP"], Err(ReqErr::Err403));
+	}
+
+	#[test]
+	fn successful_file() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/plain".to_owned(),
+			content_length: 4,
+			file_content: "meow".to_owned(),
+		};
+		validate_assert(&vec!["GET", "/test/meow.txt", "HTTP"], Ok(response));
+	}
+
+	#[test]
+	fn forbidden_access_dir() {
+		validate_assert(&vec!["GET", "/test/forbidden/", "HTTP"], Err(ReqErr::Err403));
+	}
+
+	#[test]
+	fn no_index_files() {
+		validate_assert(&vec!["GET", "/src/", "HTTP"], Err(ReqErr::Err404));
+	}
+
+	#[test]
+	fn forbidden_html_index() {
+		validate_assert(&vec!["GET", "/test/forbidden_html/", "HTTP"], Err(ReqErr::Err403));
+	}
+
+	#[test]
+	fn forbidden_shtml_index() {
+		validate_assert(&vec!["GET", "/test/forbidden_shtml/", "HTTP"], Err(ReqErr::Err403));
+	}
+
+	#[test]
+	fn forbidden_txt_index() {
+		validate_assert(&vec!["GET", "/test/forbidden_txt/", "HTTP"], Err(ReqErr::Err403));
+	}
+
+	#[test]
+	fn successful_html_index() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/html".to_owned(),
+			content_length: 0,
+			file_content: "".to_owned(),
+		};
+		validate_assert(&vec!["GET", "/test/html/", "HTTP"], Ok(response));
+	}
+
+	#[test]
+	fn successful_shtml_index() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/html".to_owned(),
+			content_length: 0,
+			file_content: "".to_owned(),
+		};
+		validate_assert(&vec!["GET", "/test/shtml/", "HTTP"], Ok(response));
+	}
+
+	#[test]
+	fn successful_txt_index() {
+		let response = Response {
+			protocol: "HTTP".to_owned(),
+			status_message: "200 OK".to_owned(), 
+			web_server_name: WEB_SERVER_NAME.to_owned(),
+			content_type: "text/plain".to_owned(),
+			content_length: 0,
+			file_content: "".to_owned(),
+		};
+		validate_assert(&vec!["GET", "/test/txt/", "HTTP"], Ok(response));
+	}
+	fn validate_assert(req: &Vec<&str>, expected: Result<Response, ReqErr>) {
+		let output = validate_request(req);
+		assert_eq!(expected, output);
+	}
+}
 /* generate_response */
 //takes in the file to be read, request info
 //returns a Response
