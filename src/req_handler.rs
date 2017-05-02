@@ -48,7 +48,6 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 		req_info[0] == "GET"     &&
 		re.is_match(req_info[1]) &&
 		req_info[2].contains("HTTP") {
-
 		//Step 2: Check if file exists
 		//generate path with environment's current directory
 		let mut path_string = String::new();

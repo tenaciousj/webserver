@@ -107,10 +107,6 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 	let mut log_guard = log_file.lock().unwrap();
 	let mut log_info = String::new();
 
-	let method = req_info[0];
-	let path = req_info[1];
-	let prot = req_info[2];
-
 	//Get current time
 	let time: DateTime<UTC> = UTC::now();
 	let time_str = time.format("%Y-%m-%d %H:%M:%S").to_string();
@@ -118,13 +114,13 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 	log_info.push_str(&time_str);
 	log_info.push_str("  -  ");
 
-	//Request
-	log_info.push_str(method);
-	log_info.push_str(" ");
-	log_info.push_str(path);
-	log_info.push_str(" ");
-	log_info.push_str(prot);
-	log_info.push_str("  -  ");
+	// Request
+	for req in req_info.iter() {
+		log_info.push_str(req);
+		log_info.push_str(" ");
+	}
+
+	log_info.push_str(" -  ");
 
 	//Response
 	log_info.push_str(response);
