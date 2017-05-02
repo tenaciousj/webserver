@@ -118,6 +118,9 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 
 	//only push GET, filepath, and protocol
 	for i in 0..3 {
+		//this error checking is for if 
+		//the request was poorly written
+		//i.e. only GET and filepath were sent
 		if req_info.len() >= i {
 			log_info.push_str(req_info[i]);
 			log_info.push_str(" ");
