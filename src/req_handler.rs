@@ -76,7 +76,8 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 						return Ok(generate_response(&mut f, &req_info)); 
 					},
 					Err(_) => {
-						
+						//(403 Forbidden)
+						return Err(ReqErr::Err403); 
 					}
 				}
 			} else if path.is_dir() {
