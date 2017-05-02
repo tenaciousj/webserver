@@ -147,7 +147,7 @@ fn generate_response(file: &mut File, req_info: &Vec<&str>) -> Response {
 	//checks whether content is html or plain
 	let mut content_type = String::new();
 	content_type.push_str("text/");
-	if req_info[1].contains(".html") {
+	if req_info[1].contains("html") {
 		content_type.push_str("html");
 	} else {
 		content_type.push_str("plain");

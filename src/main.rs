@@ -10,8 +10,9 @@
 * Assumptions
 * 1) Assumes filepath is valid
 *	- Assumes file path begins with /
-*	- Assumes there is a period in the filepath
+*	- Assumes file path matches traditional file name regex
 *	- Will return 400 Bad Request if access to directory is attempted
+* 	- Will return 403 Forbidden if a compressed file is attempted
 */
 
 use std::fmt;
