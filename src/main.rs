@@ -114,9 +114,16 @@ fn log_info(req_info: &Vec<&str>, log_file: &mut Arc<Mutex<File>>, response: &st
 	log_info.push_str(&time_str);
 	log_info.push_str("  -  ");
 
-	// Request
-	for req in req_info.iter() {
-		log_info.push_str(req);
+	if req_info.len() >= 1 {
+		log_info.push_str(req_info[0]);
+		log_info.push_str(" ");
+	}
+	if req_info.len() >= 2 {
+		log_info.push_str(req_info[1]);
+		log_info.push_str(" ");
+	}
+	if req_info.len() >= 3 {
+		log_info.push_str(req_info[2]);
 		log_info.push_str(" ");
 	}
 

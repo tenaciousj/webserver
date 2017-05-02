@@ -59,7 +59,14 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 		path_string.push_str(&env_path.display().to_string());
 		path_string.push_str(req_info[1]);
 
+		// this is a compressed file, cannot open
+		if path_string.contains(".zip") || path_string.contains(".7z") {
+			//(403 Forbidden)
+			return Err(ReqErr::Err403);
+		}
+
 		let path = Path::new(&path_string);
+		println!("{}", path_string);
 		if path.exists() {
 			// Step 3: Check if it's a file or directory
 			if path.is_file() {
@@ -71,8 +78,7 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 						return Ok(generate_response(&mut f, &req_info)); 
 					},
 					Err(_) => {
-						//(403 Forbidden)
-						return Err(ReqErr::Err403);
+						
 					}
 				}
 			} else if path.is_dir() {
@@ -83,13 +89,11 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 							let file_type_result = entry.file_type();
 							if let Ok(file_type) = file_type_result {
 								if file_type.is_file() {
-									// println!("{:?}", entry.file_name());
 									let entry_name = entry.file_name();
 									let entry_str = entry_name.to_str().unwrap();
 									if entry_str == "index.html" || 
 									    entry_str == "index.shtml" || 
 									    entry_str == "index.txt" {
-										// println!("meow");
 										let file = File::open(&entry.path().as_path());
 										match file {
 											Ok(mut f) => {
@@ -107,9 +111,11 @@ pub fn validate_request(req_info: &Vec<&str>) -> Result<Response, ReqErr> {
 							}
 						}
 					}
+
 					// return 404 if not found
 					return Err(ReqErr::Err404);
 				} else {
+
 					// since we already checked if the path exists
 					// and it's a directory, that means that any error
 					// comes from forbidden access to directory

@@ -1,2 +1,1 @@
-2017-04-29 22:28:51  -  GET /logs/log1.txt HTTP  -  404 Not Found
-2017-04-29 22:29:28  -  GET /src/log1.txt HTTP  -  200 OK
+2017-05-02 05:28:53  -  GET /test.zip HTTP  -  403 Forbidden
